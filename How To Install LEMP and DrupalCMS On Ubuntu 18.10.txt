@@ -1,0 +1,75 @@
+###Install service###
+sudo apt install software-properties-common
+sudo add-apt-repository ppa:ondrej/php
+sudo apt update
+sudo apt install nginx mariadb-server mariadb-client software-properties-common php7.2-fpm php7.2-common php7.2-mbstring php7.2-xmlrpc php7.2-soap php7.2-gd php7.2-xml php7.2-intl php7.2-mysql php7.2-cli php7.2-zip php7.2-curl
+
+###Konfigurasi PHP###
+sudo nano /etc/php/7.2/fpm/php.ini
+	
+	#Cari dan edit value seperti di bawah
+	file_uploads = On
+	allow_url_fopen = On
+	memory_limit = 256M
+	upload_max_filesize = 100M
+	max_execution_time = 360
+	date.timezone = Asia/Jakarta
+
+###Create Database###
+sudo mysql_secure_installation
+sudo mysql -u root -p
+	
+	CREATE DATABASE drupaldb;
+	CREATE USER 'namauser'@'localhost' IDENTIFIED BY 'password';
+	GRANT ALL PRIVILEGES ON drupaldb.* TO 'namauser'@'localhost' IDENTIFIED BY 'password' WITH GRANT OPTION;
+	FLUSH PRIVILEGES;
+	EXIT;
+
+###Download Drupal###
+cd /tmp && wget https://ftp.drupal.org/files/projects/drupal-8.4.5.tar.gz
+tar -zxvf drupal*.gz
+sudo mv drupal-8.4.5 /var/www/html/drupal
+sudo chown -R www-data:www-data /var/www/html/drupal/
+sudo chmod -R 755 /var/www/html/drupal/
+
+###Konfigurasi VirtualHost###
+sudo nano /etc/nginx/sites-available/drupal
+
+###Copy Script di bawah###
+server {
+    listen 80;
+    listen [::]:80;
+    root /var/www/html/drupal;
+    index  index.php index.html index.htm;
+    server_name  namadomain;
+
+    location / {
+    try_files $uri /index.php?$query_string;        
+    }
+
+    location @rewrite {
+               rewrite ^/(.*)$ /index.php?q=$1;
+        }
+
+    location ~ [^/]\.php(/|$) {
+         include snippets/fastcgi-php.conf;
+         fastcgi_pass unix:/var/run/php/php7.2-fpm.sock;
+         fastcgi_param SCRIPT_FILENAME $document_root$fastcgi_script_name;
+         include fastcgi_params;
+    }
+
+    location ~ ^/sites/.*/files/styles/ { # For Drupal >= 7
+               try_files $uri @rewrite;
+        }
+
+    location ~ ^(/[a-z\-]+)?/system/files/ { # For Drupal >= 7
+        try_files $uri /index.php?$query_string;
+        }
+}
+###Akhir Script###
+
+sudo ln -s /etc/nginx/sites-available/drupal /etc/nginx/sites-enabled/
+
+###Restart Services###
+sudo systemctl restart nginx
+sudo systemctl restart mariadb
