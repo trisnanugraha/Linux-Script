@@ -1,0 +1,117 @@
+####Setup Docker Repository
+
+sudo yum install -y yum-utils
+
+sudo yum-config-manager \
+    --add-repo \
+    https://download.docker.com/linux/centos/docker-ce.repo
+
+
+####Install Docker Engine
+
+sudo yum install docker-ce docker-ce-cli containerd.io
+
+
+####Running Docker Services
+
+systemctl start docker
+
+
+####Checking Docker Version
+
+docker --version
+
+
+####Install Docker Compose
+
+yum install curl -y
+
+curl -L "https://github.com/docker/compose/releases/download/1.24.1/docker-compose-$(uname -s)-$(uname -m)" -o /usr/local/bin/docker-compose
+
+chmod +x /usr/local/bin/docker-compose
+
+
+####Checking Docker Compose Version
+
+docker-compose version
+
+
+####Setup Docker Compose Project
+
+mkdir -p ~/docker/lamp/html
+
+cd ~/docker/lamp
+
+
+#### Create new file php docker
+
+nano php.Dockerfile
+
+
+####Isi file php.Dockerfile dengan perintah dibawah
+
+FROM php:7.4.19-apache
+RUN docker-php-ext-install mysqli pdo pdo_mysql
+
+
+#### Create new file docker compose
+
+nano docker-compose.yaml
+
+
+####Isi file docker-compose.yaml dengan perintah dibawah
+
+version: "3.7"
+services:
+  web-server:
+    build:
+      dockerfile: php.Dockerfile
+      context: .
+    restart: always
+    volumes:
+      - "./html/:/var/www/html/"
+    ports:
+      - "8080:80"
+  mysql-server:
+    image: mariadb:10.3.29
+    restart: always
+    environment:
+      MYSQL_ROOT_PASSWORD: secret
+    volumes:
+      - mysql-data:/var/lib/mysql
+
+  phpmyadmin:
+    image: phpmyadmin/phpmyadmin:5.0.1
+    restart: always
+    environment:
+      PMA_HOST: mysql-server
+      PMA_USER: root
+      PMA_PASSWORD: secret
+    ports:
+      - "5000:80"
+volumes:
+  mysql-data:
+
+
+####Starting LAMP Stack
+
+docker-compose up -d
+
+Note: untuk pertama kali dijalankan butuh waktu agak lama untuk proses download.
+
+
+####Checking Port
+
+docker-compose ps
+
+
+####Shutdown LAMP Stack
+
+docker-compose down
+
+
+
+
+
+
+
